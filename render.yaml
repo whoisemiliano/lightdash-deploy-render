@@ -43,8 +43,7 @@ services:
         generateValue: true
       - key: PORT
         value: 8080
-      # Set to https://<TAILSCALE_HOSTNAME>.<your-tailnet>.ts.net
-      # Find your tailnet name at https://login.tailscale.com/admin/dns
+      # e.g. https://lightdash.tailad4ebd.ts.net
       - key: SITE_URL
         sync: false
       # Generate an ephemeral pre-authorized key at:
