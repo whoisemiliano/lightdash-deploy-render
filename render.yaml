@@ -3,7 +3,7 @@ previewsEnabled: false
 databases:
   - name: lightdash-database
     ipAllowList: []
-    plan: free
+    plan: basic-256mb
 
 services:
   # type: pserv = Render private service — no public URL is assigned.
