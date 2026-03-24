@@ -65,17 +65,7 @@ tailscale \
     ${TS_TAGS_ARG}
 
 echo "Joined tailnet as ${TAILSCALE_HOSTNAME}"
-
-# ---- Set up HTTPS via tailscale serve ----
-# Tailscale automatically provisions a TLS cert for <hostname>.<tailnet>.ts.net
-# timeout 15 prevents this from blocking the entrypoint if something goes wrong
-timeout 15 tailscale \
-    --socket="${TS_SOCKET}" \
-    serve \
-    --bg \
-    "http://localhost:${TAILSCALE_SERVE_PORT}" \
-    && echo "HTTPS enabled: https://${TAILSCALE_HOSTNAME}.tailad4ebd.ts.net" \
-    || echo "Warning: tailscale serve setup failed, continuing on HTTP"
+echo "Access Lightdash at: http://${TAILSCALE_HOSTNAME}.tailad4ebd.ts.net:${TAILSCALE_SERVE_PORT}"
 
 # ---- Run database migrations ----
 pnpm -F backend migrate-production

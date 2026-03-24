@@ -38,7 +38,7 @@ services:
       - key: TRUST_PROXY
         value: true
       - key: SECURE_COOKIES
-        value: true
+        value: false
       - key: LIGHTDASH_SECRET
         generateValue: true
       - key: PORT
