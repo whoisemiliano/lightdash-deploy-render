@@ -32,15 +32,18 @@ tailscaled \
     --socket="${TS_SOCKET}" \
     &
 
-# ---- Wait for tailscaled to become ready (up to 30 s) ----
+# ---- Wait for tailscaled to become ready (up to 60 s) ----
+# `tailscale status` exits non-zero when in NeedsLogin state, so we check
+# the output text instead of the exit code to detect a responding daemon.
 echo "Waiting for tailscaled..."
-for i in $(seq 1 30); do
-    if tailscale --socket="${TS_SOCKET}" status > /dev/null 2>&1; then
+for i in $(seq 1 60); do
+    TS_OUT=$(tailscale --socket="${TS_SOCKET}" status 2>&1 || true)
+    if echo "${TS_OUT}" | grep -qiE "NeedsLogin|Running|Stopped|Logged out"; then
         echo "tailscaled is ready"
         break
     fi
-    if [ "${i}" -eq 30 ]; then
-        echo "ERROR: tailscaled failed to start within 30 seconds" >&2
+    if [ "${i}" -eq 60 ]; then
+        echo "ERROR: tailscaled failed to start within 60 seconds" >&2
         exit 1
     fi
     sleep 1
