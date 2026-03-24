@@ -41,6 +41,8 @@ services:
         value: true
       - key: LIGHTDASH_SECRET
         generateValue: true
+      - key: PORT
+        value: 8080
       # Set to https://<TAILSCALE_HOSTNAME>.<your-tailnet>.ts.net
       # Find your tailnet name at https://login.tailscale.com/admin/dns
       - key: SITE_URL
@@ -53,3 +55,7 @@ services:
       # The device name shown in the Tailscale admin console
       - key: TAILSCALE_HOSTNAME
         value: lightdash
+    disk:
+      name: tailscale-state
+      mountPath: /var/lib/tailscale
+      sizeGB: 1
