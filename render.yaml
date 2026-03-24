@@ -9,7 +9,7 @@ services:
   # type: pserv = Render private service — no public URL is assigned.
   # The only way to reach this instance is through Tailscale.
   - type: pserv
-    plan: free
+    plan: starter
     env: docker
     name: lightdash-server
     dockerContext: .
