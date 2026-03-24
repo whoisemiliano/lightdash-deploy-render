@@ -1,16 +1,18 @@
 #!/bin/bash
 # entrypoint.sh
 #
-# Joins this container to the Tailscale network, runs DB migrations,
-# then starts Lightdash. Access the app via Tailscale MagicDNS:
-#   http://<TAILSCALE_HOSTNAME>:8080
+# Joins this container to the Tailscale network, sets up HTTPS via tailscale serve,
+# runs DB migrations, then starts Lightdash.
+#
+# Access the app at: https://<TAILSCALE_HOSTNAME>.<tailnet>.ts.net
 #
 # Required env vars:
 #   TAILSCALE_AUTH_KEY  — ephemeral pre-authorized key (tskey-auth-...)
 #   TAILSCALE_HOSTNAME  — device name in Tailscale admin (default: lightdash)
 #
 # Optional env vars:
-#   TAILSCALE_TAGS      — space-separated ACL tag list, e.g. "tag:server tag:prod"
+#   TAILSCALE_SERVE_PORT — local port the app listens on (default: 8080)
+#   TAILSCALE_TAGS       — space-separated ACL tag list, e.g. "tag:server tag:prod"
 
 set -e
 
@@ -20,20 +22,21 @@ if [ -z "${TAILSCALE_AUTH_KEY}" ]; then
 fi
 
 TAILSCALE_HOSTNAME="${TAILSCALE_HOSTNAME:-lightdash}"
+TAILSCALE_SERVE_PORT="${TAILSCALE_SERVE_PORT:-8080}"
 TS_SOCKET="/var/run/tailscale/tailscaled.sock"
 
 # ---- Start tailscaled in userspace mode ----
 tailscaled \
     --tun=userspace-networking \
     --state=/var/lib/tailscale/tailscaled.state \
-    --socket="${TS_SOCKET}" \
-    2>/dev/null &
+    --socket="${TS_SOCKET}" &
 
-# ---- Wait for tailscaled to become ready (up to 60 s) ----
+# ---- Wait for the socket file to appear (up to 60 s) ----
+# Checking for the socket file is more reliable than parsing `tailscale status`
+# output, which varies depending on auth state.
 echo "Waiting for tailscaled..."
 for i in $(seq 1 60); do
-    TS_OUT=$(tailscale --socket="${TS_SOCKET}" status 2>&1 || true)
-    if echo "${TS_OUT}" | grep -qiE "NeedsLogin|Running|Stopped|Logged out"; then
+    if [ -S "${TS_SOCKET}" ]; then
         echo "tailscaled is ready"
         break
     fi
@@ -70,7 +73,7 @@ timeout 15 tailscale \
     --socket="${TS_SOCKET}" \
     serve \
     --bg \
-    "http://localhost:${TAILSCALE_SERVE_PORT:-8080}" \
+    "http://localhost:${TAILSCALE_SERVE_PORT}" \
     && echo "HTTPS enabled: https://${TAILSCALE_HOSTNAME}.tailad4ebd.ts.net" \
     || echo "Warning: tailscale serve setup failed, continuing on HTTP"
 
