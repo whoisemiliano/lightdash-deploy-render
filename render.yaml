@@ -6,13 +6,15 @@ databases:
     plan: free
 
 services:
-  - type: web
+  # type: pserv = Render private service — no public URL is assigned.
+  # The only way to reach this instance is through Tailscale.
+  - type: pserv
     plan: free
     env: docker
     name: lightdash-server
     dockerContext: .
     dockerfilePath: dockerfile
-    envVars: 
+    envVars:
       - key: PGHOST
         fromDatabase:
           name: lightdash-database
@@ -39,3 +41,15 @@ services:
         value: true
       - key: LIGHTDASH_SECRET
         generateValue: true
+      # Set to https://<TAILSCALE_HOSTNAME>.<your-tailnet>.ts.net
+      # Find your tailnet name at https://login.tailscale.com/admin/dns
+      - key: SITE_URL
+        sync: false
+      # Generate an ephemeral pre-authorized key at:
+      # https://login.tailscale.com/admin/settings/keys
+      # Enable "Ephemeral" so the device is removed when the container stops.
+      - key: TAILSCALE_AUTH_KEY
+        sync: false
+      # The device name shown in the Tailscale admin console
+      - key: TAILSCALE_HOSTNAME
+        value: lightdash
