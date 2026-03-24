@@ -1,18 +1,16 @@
 #!/bin/bash
 # entrypoint.sh
 #
-# Starts Tailscale in userspace-networking mode (no /dev/net/tun or NET_ADMIN
-# required), joins the tailnet, proxies inbound traffic to the app via
-# `tailscale serve`, runs DB migrations, then starts Lightdash.
+# Joins this container to the Tailscale network, runs DB migrations,
+# then starts Lightdash. Access the app via Tailscale MagicDNS:
+#   http://<TAILSCALE_HOSTNAME>:8080
 #
 # Required env vars:
-#   TAILSCALE_AUTH_KEY  — Tailscale auth key (use ephemeral pre-auth keys for containers)
-#   TAILSCALE_HOSTNAME  — Device name shown in Tailscale admin (default: lightdash)
-#   SITE_URL            — Must be set to https://<hostname>.<tailnet>.ts.net
+#   TAILSCALE_AUTH_KEY  — ephemeral pre-authorized key (tskey-auth-...)
+#   TAILSCALE_HOSTNAME  — device name in Tailscale admin (default: lightdash)
 #
 # Optional env vars:
-#   TAILSCALE_SERVE_PORT — Local port the app listens on (default: 8080)
-#   TAILSCALE_TAGS       — Space-separated ACL tag list, e.g. "tag:server tag:prod"
+#   TAILSCALE_TAGS      — space-separated ACL tag list, e.g. "tag:server tag:prod"
 
 set -e
 
@@ -22,7 +20,6 @@ if [ -z "${TAILSCALE_AUTH_KEY}" ]; then
 fi
 
 TAILSCALE_HOSTNAME="${TAILSCALE_HOSTNAME:-lightdash}"
-TAILSCALE_SERVE_PORT="${TAILSCALE_SERVE_PORT:-8080}"
 TS_SOCKET="/var/run/tailscale/tailscaled.sock"
 
 # ---- Start tailscaled in userspace mode ----
@@ -30,11 +27,9 @@ tailscaled \
     --tun=userspace-networking \
     --state=/var/lib/tailscale/tailscaled.state \
     --socket="${TS_SOCKET}" \
-    &
+    2>/dev/null &
 
 # ---- Wait for tailscaled to become ready (up to 60 s) ----
-# `tailscale status` exits non-zero when in NeedsLogin state, so we check
-# the output text instead of the exit code to detect a responding daemon.
 echo "Waiting for tailscaled..."
 for i in $(seq 1 60); do
     TS_OUT=$(tailscale --socket="${TS_SOCKET}" status 2>&1 || true)
@@ -67,15 +62,7 @@ tailscale \
     ${TS_TAGS_ARG}
 
 echo "Joined tailnet as ${TAILSCALE_HOSTNAME}"
-
-# ---- Proxy inbound tailnet traffic to the local app ----
-tailscale \
-    --socket="${TS_SOCKET}" \
-    serve \
-    --bg \
-    "http://localhost:${TAILSCALE_SERVE_PORT}"
-
-echo "tailscale serve active: https://${TAILSCALE_HOSTNAME}.<tailnet>.ts.net -> localhost:${TAILSCALE_SERVE_PORT}"
+echo "Access Lightdash at: http://${TAILSCALE_HOSTNAME}:8080 (on your tailnet)"
 
 # ---- Run database migrations ----
 pnpm -F backend migrate-production
